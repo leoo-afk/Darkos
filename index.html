@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DarkOS Persistent</title>
+
+<style>
+body{
+margin:0;
+background:#050505;
+color:#00ff99;
+font-family:monospace;
+overflow:hidden;
+}
+
+#top{
+height:45px;
+display:flex;
+align-items:center;
+padding:10px;
+border-bottom:1px solid rgba(0,255,153,0.2);
+letter-spacing:3px;
+}
+
+#wrap{
+display:flex;
+height:calc(100vh - 45px);
+}
+
+#left{
+width:30%;
+border-right:1px solid rgba(0,255,153,0.2);
+padding:10px;
+}
+
+#right{
+flex:1;
+padding:10px;
+}
+
+.node{
+padding:8px;
+margin:5px 0;
+border:1px solid rgba(0,255,153,0.2);
+cursor:pointer;
+}
+
+.node:hover{
+background:rgba(0,255,153,0.05);
+}
+
+#terminal{
+height:320px;
+border:1px solid rgba(0,255,153,0.2);
+padding:10px;
+overflow:auto;
+background:black;
+}
+
+input{
+width:100%;
+padding:8px;
+background:black;
+color:#00ff99;
+border:1px solid rgba(0,255,153,0.3);
+outline:none;
+}
+
+.small{
+opacity:0.7;
+font-size:12px;
+margin-top:10px;
+}
+
+/* BUTTON */
+button{
+margin-top:10px;
+width:100%;
+padding:6px;
+background:black;
+color:#00ff99;
+border:1px solid rgba(0,255,153,0.3);
+cursor:pointer;
+}
+</style>
+
+</head>
+<body>
+
+<div id="top">DARKOS // PERSISTENT HACKING SYSTEM</div>
+
+<div id="wrap">
+
+<div id="left">
+<h3>NETWORK</h3>
+<div id="nodes"></div>
+
+<button onclick="refreshNetwork()">REFRESH NETWORK</button>
+
+<div class="small" id="status"></div>
+</div>
+
+<div id="right">
+<h3>TERMINAL</h3>
+<div id="terminal"></div>
+
+<input id="cmd" placeholder="scan / connect / hack / ls / steal / decrypt / status / save / reset">
+</div>
+
+</div>
+
+<script>
+
+/* NETWORK */
+const network={
+"A":{ip:"10.0.0.1",security:1,files:["log.txt","data.cache"]},
+"B":{ip:"192.168.0.1",security:3,files:["bank.db","vault.key"]},
+"C":{ip:"172.16.0.5",security:2,files:["archive.zip","users.db"]}
+};
+
+/* STATE */
+let current="A";
+let hacked=false;
+let trace=0;
+let money=0;
+let inventory=[];
+
+/* SAVE */
+const SAVE_KEY="darkos_save_v1";
+
+function saveGame(){
+localStorage.setItem(SAVE_KEY,JSON.stringify({
+current,hacked,trace,money,inventory
+}));
+}
+
+function loadGame(){
+let data=localStorage.getItem(SAVE_KEY);
+
+if(data){
+let s=JSON.parse(data);
+current=s.current||"A";
+hacked=s.hacked||false;
+trace=s.trace||0;
+money=s.money||0;
+inventory=s.inventory||[];
+log("✔ save loaded");
+}else{
+let name=prompt("Create username:");
+log("✔ new user: "+name);
+saveGame();
+}
+}
+
+setInterval(saveGame,3000);
+
+/* LOG */
+function log(t){
+let time=new Date().toLocaleTimeString();
+document.getElementById("terminal")
+.innerHTML+="<div>["+time+"] "+t+"</div>";
+}
+
+/* RENDER */
+function render(){
+let box=document.getElementById("nodes");
+box.innerHTML="";
+
+for(let n in network){
+let d=document.createElement("div");
+d.className="node";
+
+/* ONLY IP DISPLAY */
+d.innerHTML=network[n].ip;
+
+d.onclick=()=>{
+current=n;
+log("connected → "+network[n].ip);
+};
+
+box.appendChild(d);
+}
+}
+
+/* REFRESH NETWORK */
+function refreshNetwork(){
+log("refreshing network nodes...");
+
+for(let n in network){
+network[n].ip =
+"10."+
+Math.floor(Math.random()*255)+"."+
+Math.floor(Math.random()*255)+"."+
+Math.floor(Math.random()*255);
+}
+
+render();
+log("network updated");
+}
+
+/* STATUS */
+function status(){
+document.getElementById("status").innerText=
+"NODE:"+network[current].ip+
+" | ROOT:"+hacked+
+" | $"+money+
+" | TRACE:"+trace+"%";
+}
+
+/* TRACE */
+setInterval(()=>{
+if(hacked){
+trace=Math.min(100,trace+1);
+if(trace>=100){
+log("⚠ TRACE MAXED — SYSTEM LOCKED");
+location.reload();
+}
+}
+},4000);
+
+/* COMMANDS */
+document.getElementById("cmd").addEventListener("keydown",e=>{
+if(e.key==="Enter"){
+handle(e.target.value);
+e.target.value="";
+status();
+}
+});
+
+function handle(c){
+let a=c.split(" ");
+let node=network[current];
+
+/* SCAN */
+if(c==="scan"){
+for(let n in network){
+log(network[n].ip);
+}
+}
+
+/* CONNECT */
+if(a[0]==="connect"){
+if(network[a[1]]){
+current=a[1];
+log("secure link → "+network[a[1]].ip);
+}
+}
+
+/* HACK */
+if(c==="hack"){
+let p=0;
+log("breach starting...");
+
+let i=setInterval(()=>{
+p+=5;
+
+if(p%20===0) log("bypassing...");
+
+if(p>=100){
+clearInterval(i);
+hacked=true;
+log("ROOT ACCESS GRANTED");
+}
+},70);
+}
+
+/* LS */
+if(c==="ls"){
+if(!hacked) return log("ACCESS DENIED");
+network[current].files.forEach(f=>log(f));
+}
+
+/* STEAL */
+if(a[0]==="steal"){
+if(!hacked) return log("ACCESS DENIED");
+inventory.push(a[1]);
+money+=50;
+log("stolen → "+a[1]);
+}
+
+/* DECRYPT */
+if(a[0]==="decrypt"){
+if(!hacked) return log("ACCESS DENIED");
+setTimeout(()=>{
+money+=100;
+log("decrypted data");
+},800);
+}
+
+/* STATUS */
+if(c==="status"){
+log("NODE:"+network[current].ip);
+log("ROOT:"+hacked);
+log("MONEY:"+money);
+log("TRACE:"+trace+"%");
+}
+
+/* SAVE */
+if(c==="save"){
+saveGame();
+log("✔ saved");
+}
+
+/* RESET */
+if(c==="reset"){
+localStorage.removeItem(SAVE_KEY);
+location.reload();
+}
+}
+
+/* INIT */
+render();
+loadGame();
+status();
+log("DarkOS online...");
+
+</script>
+
+</body>
+</html>
