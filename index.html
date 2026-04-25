@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>DarkOS Black Market</title>
+<title>DarkOS MMO Lite</title>
 
 <style>
 body{
@@ -13,9 +13,6 @@ overflow:hidden;
 }
 
 #top{
-height:45px;
-display:flex;
-align-items:center;
 padding:10px;
 border-bottom:1px solid rgba(0,255,153,0.2);
 letter-spacing:3px;
@@ -23,7 +20,7 @@ letter-spacing:3px;
 
 #wrap{
 display:flex;
-height:calc(100vh - 45px);
+height:calc(100vh - 40px);
 }
 
 #left{
@@ -38,18 +35,14 @@ padding:10px;
 }
 
 .node{
-padding:8px;
+padding:6px;
 margin:5px 0;
 border:1px solid rgba(0,255,153,0.2);
 cursor:pointer;
 }
 
-.node:hover{
-background:rgba(0,255,153,0.05);
-}
-
 #terminal{
-height:320px;
+height:300px;
 border:1px solid rgba(0,255,153,0.2);
 padding:10px;
 overflow:auto;
@@ -62,30 +55,21 @@ padding:8px;
 background:black;
 color:#00ff99;
 border:1px solid rgba(0,255,153,0.3);
-outline:none;
 }
 
 button{
-margin-top:10px;
 width:100%;
-padding:6px;
+margin-top:8px;
 background:black;
 color:#00ff99;
 border:1px solid rgba(0,255,153,0.3);
-cursor:pointer;
-}
-
-.small{
-opacity:0.7;
-font-size:12px;
-margin-top:10px;
 }
 </style>
 
 </head>
 <body>
 
-<div id="top">DARKOS // DARK WEB NETWORK</div>
+<div id="top">DARKOS // MMO LITE</div>
 
 <div id="wrap">
 
@@ -93,16 +77,16 @@ margin-top:10px;
 <h3>NETWORK</h3>
 <div id="nodes"></div>
 
-<button onclick="refreshNetwork()">REFRESH NETWORK</button>
+<button onclick="refreshNetwork()">REFRESH</button>
 
-<div class="small" id="status"></div>
+<div id="status"></div>
 </div>
 
 <div id="right">
 <h3>TERMINAL</h3>
 <div id="terminal"></div>
 
-<input id="cmd" placeholder="scan / hack / ls / mission / accept / complete / shop / buy">
+<input id="cmd" placeholder="register / login / hack / top">
 </div>
 
 </div>
@@ -110,41 +94,28 @@ margin-top:10px;
 <script>
 
 /* NETWORK */
-const network={
-"A":{ip:"10.0.0.1",security:1,files:["log.txt","data.cache"],owner:"system"},
-"B":{ip:"192.168.0.1",security:3,files:["bank.db","vault.key"],owner:"system"},
-"C":{ip:"172.16.0.5",security:2,files:["archive.zip","users.db"],owner:"system"}
+let network={
+"A":{ip:"10.0.0.1"},
+"B":{ip:"192.168.0.1"},
+"C":{ip:"172.16.0.5"}
 };
 
 /* STATE */
 let current="A";
-let hacked=false;
-let trace=0;
+let user=null;
 let money=0;
-let inventory=[];
-let isAdmin=false;
 
-/* MISSIONS */
-let missions=[
-{id:1,text:"Hack any node",reward:200,done:false},
-{id:2,text:"Steal a file",reward:150,done:false},
-{id:3,text:"Decrypt data",reward:250,done:false}
-];
-
-let activeMission=null;
-
-/* SHOP */
-let shop={
-"speed":200,
-"stealth":300,
-"decryptor":400
-};
+/* DATABASE (LOCAL MMO) */
+let db = JSON.parse(localStorage.getItem("darkos_mmo")||"{}");
 
 /* LOG */
 function log(t){
-let time=new Date().toLocaleTimeString();
-document.getElementById("terminal")
-.innerHTML+="<div>["+time+"] "+t+"</div>";
+document.getElementById("terminal").innerHTML+="<div>"+t+"</div>";
+}
+
+/* SAVE */
+function save(){
+localStorage.setItem("darkos_mmo",JSON.stringify(db));
 }
 
 /* RENDER */
@@ -169,35 +140,17 @@ box.appendChild(d);
 /* REFRESH */
 function refreshNetwork(){
 for(let n in network){
-network[n].ip =
-"10."+
-Math.floor(Math.random()*255)+"."+
-Math.floor(Math.random()*255)+"."+
-Math.floor(Math.random()*255);
+network[n].ip="10."+Math.random()*255|0+"."+Math.random()*255|0+"."+Math.random()*255|0;
 }
 render();
-log("network updated");
+log("network refreshed");
 }
 
 /* STATUS */
 function status(){
 document.getElementById("status").innerText=
-"NODE:"+network[current].ip+
-" | $"+money+
-" | TRACE:"+trace+"%";
+(user?user:"guest")+" | $"+money;
 }
-
-/* TRACE */
-setInterval(()=>{
-if(hacked){
-trace++;
-if(trace>=99){
-trace=0;
-hacked=false;
-log("⚡ TRACE RESET");
-}
-}
-},4000);
 
 /* COMMANDS */
 document.getElementById("cmd").addEventListener("keydown",e=>{
@@ -210,101 +163,49 @@ status();
 
 function handle(c){
 let a=c.split(" ");
-let node=network[current];
 
-/* SCAN */
-if(c==="scan"){
-for(let n in network){
-log(network[n].ip);
+/* REGISTER */
+if(a[0]==="register"){
+if(db[a[1]]){
+log("user exists");
+}else{
+db[a[1]]={pass:a[2],money:0};
+save();
+log("registered");
+}
+}
+
+/* LOGIN */
+if(a[0]==="login"){
+let u=db[a[1]];
+if(u && u.pass===a[2]){
+user=a[1];
+money=u.money;
+log("logged in");
+}else{
+log("login failed");
 }
 }
 
 /* HACK */
 if(c==="hack"){
-hacked=true;
-node.owner="YOU";
+if(!user) return log("login first");
 money+=50;
-log("node hacked");
-
-/* mission progress */
-if(activeMission && activeMission.id===1){
-completeMission();
-}
+db[user].money=money;
+save();
+log("hack success +$50");
 }
 
-/* LS */
-if(c==="ls"){
-if(!hacked) return log("ACCESS DENIED");
-node.files.forEach(f=>log(f));
-}
+/* LEADERBOARD */
+if(c==="top"){
+let top=Object.entries(db)
+.sort((a,b)=>b[1].money-a[1].money)
+.slice(0,5);
 
-/* STEAL */
-if(a[0]==="steal"){
-if(!hacked) return log("ACCESS DENIED");
-inventory.push(a[1]);
-money+=50;
-log("stolen");
-
-/* mission */
-if(activeMission && activeMission.id===2){
-completeMission();
-}
-}
-
-/* DECRYPT */
-if(a[0]==="decrypt"){
-if(!hacked) return log("ACCESS DENIED");
-money+=100;
-log("decrypted");
-
-/* mission */
-if(activeMission && activeMission.id===3){
-completeMission();
-}
-}
-
-/* MISSIONS LIST */
-if(c==="mission"){
-missions.forEach(m=>{
-if(!m.done) log(m.id+": "+m.text+" ($"+m.reward+")");
+log("=== TOP HACKERS ===");
+top.forEach(p=>{
+log(p[0]+" | $"+p[1].money);
 });
-}
-
-/* ACCEPT */
-if(a[0]==="accept"){
-let m=missions.find(x=>x.id==a[1] && !x.done);
-if(m){
-activeMission=m;
-log("mission accepted: "+m.text);
-}
-}
-
-/* COMPLETE */
-function completeMission(){
-activeMission.done=true;
-money+=activeMission.reward;
-log("✔ mission complete +$"+activeMission.reward);
-activeMission=null;
-}
-
-/* SHOP */
-if(c==="shop"){
-for(let i in shop){
-log(i+" - $"+shop[i]);
-}
-}
-
-/* BUY */
-if(a[0]==="buy"){
-let item=a[1];
-if(shop[item]){
-if(money>=shop[item]){
-money-=shop[item];
-log("bought "+item);
-}else{
-log("not enough money");
-}
-}
 }
 
 }
@@ -312,7 +213,7 @@ log("not enough money");
 /* INIT */
 render();
 status();
-log("DarkOS online...");
+log("DarkOS MMO Lite online");
 
 </script>
 
