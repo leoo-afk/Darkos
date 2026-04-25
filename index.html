@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>DarkOS Ultimate</title>
+<title>DarkOS Black Market</title>
 
 <style>
 body{
@@ -85,7 +85,7 @@ margin-top:10px;
 </head>
 <body>
 
-<div id="top">DARKOS // ULTIMATE HACKING SYSTEM</div>
+<div id="top">DARKOS // DARK WEB NETWORK</div>
 
 <div id="wrap">
 
@@ -102,7 +102,7 @@ margin-top:10px;
 <h3>TERMINAL</h3>
 <div id="terminal"></div>
 
-<input id="cmd" placeholder="scan / hack / ls / status / admin root123">
+<input id="cmd" placeholder="scan / hack / ls / mission / accept / complete / shop / buy">
 </div>
 
 </div>
@@ -124,34 +124,21 @@ let money=0;
 let inventory=[];
 let isAdmin=false;
 
-/* SAVE */
-const SAVE_KEY="darkos_save_final";
+/* MISSIONS */
+let missions=[
+{id:1,text:"Hack any node",reward:200,done:false},
+{id:2,text:"Steal a file",reward:150,done:false},
+{id:3,text:"Decrypt data",reward:250,done:false}
+];
 
-function saveGame(){
-localStorage.setItem(SAVE_KEY,JSON.stringify({
-current,hacked,trace,money,inventory
-}));
-}
+let activeMission=null;
 
-function loadGame(){
-let data=localStorage.getItem(SAVE_KEY);
-
-if(data){
-let s=JSON.parse(data);
-current=s.current||"A";
-hacked=s.hacked||false;
-trace=s.trace||0;
-money=s.money||0;
-inventory=s.inventory||[];
-log("✔ save loaded");
-}else{
-let name=prompt("Create username:");
-log("✔ new user: "+name);
-saveGame();
-}
-}
-
-setInterval(saveGame,3000);
+/* SHOP */
+let shop={
+"speed":200,
+"stealth":300,
+"decryptor":400
+};
 
 /* LOG */
 function log(t){
@@ -181,8 +168,6 @@ box.appendChild(d);
 
 /* REFRESH */
 function refreshNetwork(){
-log("refreshing network...");
-
 for(let n in network){
 network[n].ip =
 "10."+
@@ -190,7 +175,6 @@ Math.floor(Math.random()*255)+"."+
 Math.floor(Math.random()*255)+"."+
 Math.floor(Math.random()*255);
 }
-
 render();
 log("network updated");
 }
@@ -199,34 +183,21 @@ log("network updated");
 function status(){
 document.getElementById("status").innerText=
 "NODE:"+network[current].ip+
-" | ROOT:"+hacked+
 " | $"+money+
-" | TRACE:"+trace+"%"+
-" | ADMIN:"+isAdmin;
+" | TRACE:"+trace+"%";
 }
 
-/* TRACE AUTO RESET */
-function traceSystem(){
-
+/* TRACE */
+setInterval(()=>{
 if(hacked){
-
-trace = Math.min(100, trace + 1);
-
-if(trace === 90){
-log("⚠ TRACE DETECTED");
-}
-
-/* AUTO RESET */
-if(trace >= 99){
-trace = 0;
-hacked = false;
-log("⚡ TRACE SPOOFED — SAFE");
-}
-
+trace++;
+if(trace>=99){
+trace=0;
+hacked=false;
+log("⚡ TRACE RESET");
 }
 }
-
-setInterval(traceSystem,4000);
+},4000);
 
 /* COMMANDS */
 document.getElementById("cmd").addEventListener("keydown",e=>{
@@ -250,21 +221,15 @@ log(network[n].ip);
 
 /* HACK */
 if(c==="hack"){
-let p=0;
-log("breach starting...");
-
-let i=setInterval(()=>{
-p+=5;
-
-if(p%20===0) log("bypassing...");
-
-if(p>=100){
-clearInterval(i);
 hacked=true;
 node.owner="YOU";
-log("ROOT ACCESS GRANTED");
+money+=50;
+log("node hacked");
+
+/* mission progress */
+if(activeMission && activeMission.id===1){
+completeMission();
 }
-},70);
 }
 
 /* LS */
@@ -273,54 +238,79 @@ if(!hacked) return log("ACCESS DENIED");
 node.files.forEach(f=>log(f));
 }
 
-/* STATUS */
-if(c==="status"){
-log("NODE:"+network[current].ip);
-log("ROOT:"+hacked);
-log("MONEY:"+money);
-log("TRACE:"+trace+"%");
+/* STEAL */
+if(a[0]==="steal"){
+if(!hacked) return log("ACCESS DENIED");
+inventory.push(a[1]);
+money+=50;
+log("stolen");
+
+/* mission */
+if(activeMission && activeMission.id===2){
+completeMission();
+}
 }
 
-/* ADMIN LOGIN */
-if(c.startsWith("admin")){
-if(c.split(" ")[1]==="root123"){
-isAdmin=true;
-log("✔ ADMIN ACCESS GRANTED");
+/* DECRYPT */
+if(a[0]==="decrypt"){
+if(!hacked) return log("ACCESS DENIED");
+money+=100;
+log("decrypted");
+
+/* mission */
+if(activeMission && activeMission.id===3){
+completeMission();
+}
+}
+
+/* MISSIONS LIST */
+if(c==="mission"){
+missions.forEach(m=>{
+if(!m.done) log(m.id+": "+m.text+" ($"+m.reward+")");
+});
+}
+
+/* ACCEPT */
+if(a[0]==="accept"){
+let m=missions.find(x=>x.id==a[1] && !x.done);
+if(m){
+activeMission=m;
+log("mission accepted: "+m.text);
+}
+}
+
+/* COMPLETE */
+function completeMission(){
+activeMission.done=true;
+money+=activeMission.reward;
+log("✔ mission complete +$"+activeMission.reward);
+activeMission=null;
+}
+
+/* SHOP */
+if(c==="shop"){
+for(let i in shop){
+log(i+" - $"+shop[i]);
+}
+}
+
+/* BUY */
+if(a[0]==="buy"){
+let item=a[1];
+if(shop[item]){
+if(money>=shop[item]){
+money-=shop[item];
+log("bought "+item);
 }else{
-log("❌ WRONG PASSWORD");
+log("not enough money");
 }
 }
-
-/* ADMIN COMMANDS */
-if(isAdmin){
-
-if(c==="godmode"){
-hacked=true;
-money=99999;
-for(let n in network){
-network[n].owner="YOU";
-}
-render();
-log("⚡ GOD MODE ENABLED");
-}
-
-if(c==="trace reset"){
-trace=0;
-log("⚡ trace reset");
-}
-
-if(c.startsWith("set money")){
-money=parseInt(c.split(" ")[2]);
-log("💰 money set");
-}
-
 }
 
 }
 
 /* INIT */
 render();
-loadGame();
 status();
 log("DarkOS online...");
 
